@@ -1,0 +1,145 @@
+ 
+import csv
+import os
+ 
+FILENAME = "library_books.csv"
+FIELDNAMES = ["book_id", "title", "author", "quantity"]
+ 
+ 
+def initialize_file():
+    """Create the CSV file with headers if it doesn't already exist."""
+    if not os.path.exists(FILENAME):
+        with open(FILENAME, mode="w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+            writer.writeheader()
+        print(f"Created new library file: {FILENAME}")
+ 
+ 
+def add_book(book_id, title, author, quantity):
+    """Add a new book record to the CSV file."""
+    try:
+        with open(FILENAME, mode="a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+            writer.writerow({
+                "book_id": book_id,
+                "title": title,
+                "author": author,
+                "quantity": quantity
+            })
+        print(f"Book '{title}' added successfully.")
+    except FileNotFoundError:
+        print(f"Error: '{FILENAME}' not found. Creating it now...")
+        initialize_file()
+        add_book(book_id, title, author, quantity)
+ 
+ 
+def remove_book(book_id):
+    """Remove a book record by book_id from the CSV file."""
+    try:
+        with open(FILENAME, mode="r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            books = list(reader)
+    except FileNotFoundError:
+        print(f"Error: '{FILENAME}' not found. Nothing to remove.")
+        return
+ 
+    updated_books = [book for book in books if book["book_id"] != str(book_id)]
+ 
+    if len(updated_books) == len(books):
+        print(f"No book found with ID {book_id}.")
+        return
+ 
+    with open(FILENAME, mode="w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+        writer.writeheader()
+        writer.writerows(updated_books)
+ 
+    print(f"Book with ID {book_id} removed successfully.")
+ 
+ 
+def search_book(keyword):
+    """Search for books by title or author (case-insensitive partial match)."""
+    try:
+        with open(FILENAME, mode="r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            results = [
+                book for book in reader
+                if keyword.lower() in book["title"].lower()
+                or keyword.lower() in book["author"].lower()
+            ]
+    except FileNotFoundError:
+        print(f"Error: '{FILENAME}' not found. No books to search.")
+        return []
+ 
+    if results:
+        print(f"\nFound {len(results)} matching book(s):")
+        for book in results:
+            print(f"  ID: {book['book_id']} | {book['title']} by {book['author']} "
+                  f"| Qty: {book['quantity']}")
+    else:
+        print("No matching books found.")
+ 
+    return results
+ 
+ 
+def list_all_books():
+    """Display all books currently in the library."""
+    try:
+        with open(FILENAME, mode="r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            books = list(reader)
+    except FileNotFoundError:
+        print(f"Error: '{FILENAME}' not found. No books to display.")
+        return
+ 
+    if not books:
+        print("The library has no books yet.")
+        return
+ 
+    print(f"\n{'ID':<6}{'Title':<25}{'Author':<20}{'Qty':<5}")
+    print("-" * 56)
+    for book in books:
+        print(f"{book['book_id']:<6}{book['title']:<25}{book['author']:<20}{book['quantity']:<5}")
+ 
+ 
+def main_menu():
+    initialize_file()
+ 
+    while True:
+        print("\n=== Library Book Management System ===")
+        print("1. Add Book")
+        print("2. Remove Book")
+        print("3. Search Book")
+        print("4. List All Books")
+        print("5. Exit")
+ 
+        choice = input("Enter your choice (1-5): ").strip()
+ 
+        if choice == "1":
+            book_id = input("Enter book ID: ").strip()
+            title = input("Enter title: ").strip()
+            author = input("Enter author: ").strip()
+            quantity = input("Enter quantity: ").strip()
+            add_book(book_id, title, author, quantity)
+ 
+        elif choice == "2":
+            book_id = input("Enter book ID to remove: ").strip()
+            remove_book(book_id)
+ 
+        elif choice == "3":
+            keyword = input("Enter title or author keyword to search: ").strip()
+            search_book(keyword)
+ 
+        elif choice == "4":
+            list_all_books()
+ 
+        elif choice == "5":
+            print("Exiting Library Management System. Goodbye!")
+            break
+ 
+        else:
+            print("Invalid choice. Please enter a number between 1 and 5.")
+ 
+ 
+if __name__ == "__main__":
+    main_menu()
