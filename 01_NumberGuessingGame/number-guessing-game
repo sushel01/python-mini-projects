@@ -1,0 +1,41 @@
+import random
+
+def number_guessing_game():
+    print("=== Number Guessing Game ===")
+    print("I'm thinking of a number between 1 and 100.")
+
+    lower, upper = 1, 100
+    secret_number = random.randint(lower, upper)
+    attempts = 0
+
+    while True:
+        guess_input = input(f"Enter your guess ({lower}-{upper}): ")
+
+        # Validate input
+        if not guess_input.isdigit():
+            print("Please enter a valid whole number.")
+            continue
+
+        guess = int(guess_input)
+        attempts += 1
+
+        if guess < lower or guess > upper:
+            print(f"Please guess a number between {lower} and {upper}.")
+        elif guess < secret_number:
+            print("Too low! Try again.")
+        elif guess > secret_number:
+            print("Too high! Try again.")
+        else:
+            print(f"🎉 Correct! The number was {secret_number}.")
+            print(f"You guessed it in {attempts} attempt{'s' if attempts != 1 else ''}.")
+            break
+
+    play_again = input("Play again? (y/n): ").strip().lower()
+    if play_again == 'y':
+        number_guessing_game()
+    else:
+        print("Thanks for playing!")
+
+
+if __name__ == "__main__":
+    number_guessing_game()
