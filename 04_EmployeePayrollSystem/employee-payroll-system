@@ -1,0 +1,109 @@
+ 
+import csv
+import functools
+from datetime import datetime
+ 
+LOG_FILE = "salary_log.txt"
+EXPORT_FILE = "payroll_export.csv"
+ 
+ 
+# ---------------------------------------------------------------
+# Decorator: logs every salary computation
+# ---------------------------------------------------------------
+def log_salary_computation(func):
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        salary = func(self, *args, **kwargs)
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = (f"[{timestamp}] {self.name} ({self.__class__.__name__}) "
+                     f"-> Salary calculated: ${salary:,.2f}")
+        print(log_entry)
+        with open(LOG_FILE, mode="a", encoding="utf-8") as log:
+            log.write(log_entry + "\n")
+        return salary
+    return wrapper
+ 
+ 
+# ---------------------------------------------------------------
+# Base class
+# ---------------------------------------------------------------
+class Employee:
+    def __init__(self, emp_id, name):
+        self.emp_id = emp_id
+        self.name = name
+ 
+    def calculate_salary(self):
+        raise NotImplementedError("Subclasses must implement calculate_salary()")
+ 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(id={self.emp_id}, name={self.name})"
+ 
+ 
+# ---------------------------------------------------------------
+# Full-time employee: fixed monthly salary + bonus
+# ---------------------------------------------------------------
+class FullTimeEmployee(Employee):
+    def __init__(self, emp_id, name, monthly_salary, bonus=0):
+        super().__init__(emp_id, name)
+        self.monthly_salary = monthly_salary
+        self.bonus = bonus
+ 
+    @log_salary_computation
+    def calculate_salary(self):
+        return self.monthly_salary + self.bonus
+ 
+ 
+# ---------------------------------------------------------------
+# Part-time employee: paid per hour worked
+# ---------------------------------------------------------------
+class PartTimeEmployee(Employee):
+    def __init__(self, emp_id, name, hourly_rate, hours_worked):
+        super().__init__(emp_id, name)
+        self.hourly_rate = hourly_rate
+        self.hours_worked = hours_worked
+ 
+    @log_salary_computation
+    def calculate_salary(self):
+        return self.hourly_rate * self.hours_worked
+ 
+ 
+# ---------------------------------------------------------------
+# Export payroll results to CSV
+# ---------------------------------------------------------------
+def export_payroll(employees, filename=EXPORT_FILE):
+    with open(filename, mode="w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Employee ID", "Name", "Type", "Salary"])
+        for emp in employees:
+            salary = emp.calculate_salary()  # polymorphic call, also logged
+            writer.writerow([emp.emp_id, emp.name, emp.__class__.__name__, f"{salary:.2f}"])
+    print(f"\nPayroll exported to '{filename}'.")
+ 
+ 
+# ---------------------------------------------------------------
+# Demo / main
+# ---------------------------------------------------------------
+def main():
+    employees = [
+        FullTimeEmployee(emp_id=101, name="Aarav Sharma", monthly_salary=55000, bonus=5000),
+        FullTimeEmployee(emp_id=102, name="Priya Verma", monthly_salary=62000, bonus=0),
+        PartTimeEmployee(emp_id=201, name="Rohan Mehta", hourly_rate=350, hours_worked=90),
+        PartTimeEmployee(emp_id=202, name="Simran Kaur", hourly_rate=400, hours_worked=75),
+    ]
+ 
+    print("=== Employee Payroll System ===\n")
+ 
+    # Polymorphism in action: same method call, different behavior per subclass
+    total_payroll = 0
+    for emp in employees:
+        total_payroll += emp.calculate_salary()
+ 
+    print(f"\nTotal Payroll (this run): ${total_payroll:,.2f}")
+ 
+    # Export results (recomputes + logs again during export)
+    export_payroll(employees)
+ 
+ 
+if __name__ == "__main__":
+    main()
+ 

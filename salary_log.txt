@@ -1,0 +1,8 @@
+[2026-07-08 23:22:33] Aarav Sharma (FullTimeEmployee) -> Salary calculated: $60,000.00
+[2026-07-08 23:22:33] Priya Verma (FullTimeEmployee) -> Salary calculated: $62,000.00
+[2026-07-08 23:22:33] Rohan Mehta (PartTimeEmployee) -> Salary calculated: $31,500.00
+[2026-07-08 23:22:33] Simran Kaur (PartTimeEmployee) -> Salary calculated: $30,000.00
+[2026-07-08 23:22:33] Aarav Sharma (FullTimeEmployee) -> Salary calculated: $60,000.00
+[2026-07-08 23:22:33] Priya Verma (FullTimeEmployee) -> Salary calculated: $62,000.00
+[2026-07-08 23:22:33] Rohan Mehta (PartTimeEmployee) -> Salary calculated: $31,500.00
+[2026-07-08 23:22:33] Simran Kaur (PartTimeEmployee) -> Salary calculated: $30,000.00
