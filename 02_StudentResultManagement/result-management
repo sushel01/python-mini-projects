@@ -1,0 +1,84 @@
+def get_grade(marks):
+    """Return a letter grade for a given mark (out of 100)."""
+    if marks >= 90:
+        return "A+"
+    elif marks >= 80:
+        return "A"
+    elif marks >= 70:
+        return "B"
+    elif marks >= 60:
+        return "C"
+    elif marks >= 50:
+        return "D"
+    elif marks >= 40:
+        return "P"
+    else:
+        return "F"
+
+
+def input_students():
+    """Take student names and marks from the user and store them in a dict."""
+    students = {}
+    try:
+        n = int(input("How many students? "))
+    except ValueError:
+        print("Please enter a valid number.")
+        return students
+
+    for i in range(n):
+        name = input(f"Enter name of student {i + 1}: ").strip()
+        while True:
+            try:
+                marks = float(input(f"Enter marks for {name} (0-100): "))
+                if 0 <= marks <= 100:
+                    break
+                print("Marks must be between 0 and 100.")
+            except ValueError:
+                print("Please enter a valid number.")
+        students[name] = marks
+
+    return students
+
+
+def display_results(students):
+    """Display marks, grades, average, and topper using list comprehensions."""
+    if not students:
+        print("No student data available.")
+        return
+
+    # Average marks
+    average = sum(students.values()) / len(students)
+
+    # Topper (student with highest marks)
+    topper = max(students, key=students.get)
+
+    # List comprehension: grade for each student
+    grades = {name: get_grade(marks) for name, marks in students.items()}
+
+    # List comprehension: names of students who passed (marks >= 50)
+    passed = [name for name, marks in students.items() if marks >= 50]
+
+    # List comprehension: names of students who failed
+    failed = [name for name, marks in students.items() if marks < 50]
+
+    print("\n=== Student Results ===")
+    print(f"{'Name':<15}{'Marks':<10}{'Grade':<10}")
+    print("-" * 35)
+    for name, marks in students.items():
+        print(f"{name:<15}{marks:<10}{grades[name]:<10}")
+
+    print("\n=== Summary ===")
+    print(f"Class Average : {average:.2f}")
+    print(f"Topper        : {topper} ({students[topper]} marks)")
+    print(f"Passed ({len(passed)})     : {', '.join(passed) if passed else 'None'}")
+    print(f"Failed ({len(failed)})     : {', '.join(failed) if failed else 'None'}")
+
+
+def main():
+    print("=== Student Result Management System ===")
+    students = input_students()
+    display_results(students)
+
+
+if __name__ == "__main__":
+    main()
