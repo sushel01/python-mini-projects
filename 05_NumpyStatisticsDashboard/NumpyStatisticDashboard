@@ -1,0 +1,222 @@
+ 
+import argparse
+import sys
+import csv
+import numpy as np
+ 
+ 
+BAR_CHAR = "█"
+WIDTH = 80
+ 
+ 
+# --------------------------------------------------------------------------
+# Data loading
+# --------------------------------------------------------------------------
+ 
+def load_from_csv(path, column=None):
+    with open(path, newline="") as f:
+        reader = csv.reader(f)
+        rows = list(reader)
+ 
+    if not rows:
+        raise ValueError("CSV file is empty.")
+ 
+    header = rows[0]
+    has_header = any(_try_float(cell) is None for cell in header)
+    data_rows = rows[1:] if has_header else rows
+    col_names = header if has_header else [f"col_{i}" for i in range(len(header))]
+ 
+    # Figure out which column to use
+    if column is not None:
+        if has_header and column in col_names:
+            idx = col_names.index(column)
+        else:
+            try:
+                idx = int(column)
+            except ValueError:
+                raise ValueError(f"Column '{column}' not found in CSV header {col_names}.")
+    else:
+        # auto-pick first fully-numeric column
+        idx = None
+        for i in range(len(col_names)):
+            values = [_try_float(r[i]) for r in data_rows if len(r) > i]
+            if values and all(v is not None for v in values):
+                idx = i
+                break
+        if idx is None:
+            raise ValueError("No numeric column found in CSV. Use --column to specify one.")
+ 
+    label = col_names[idx] if has_header else f"column {idx}"
+    values = []
+    for r in data_rows:
+        if len(r) > idx:
+            v = _try_float(r[idx])
+            if v is not None:
+                values.append(v)
+ 
+    if not values:
+        raise ValueError(f"No numeric data found in column '{label}'.")
+ 
+    return np.array(values, dtype=float), label
+ 
+ 
+def _try_float(s):
+    try:
+        return float(s)
+    except (ValueError, TypeError):
+        return None
+ 
+ 
+def load_from_values(raw):
+    parts = [p.strip() for p in raw.split(",") if p.strip() != ""]
+    try:
+        values = [float(p) for p in parts]
+    except ValueError as e:
+        raise ValueError(f"Could not parse values as numbers: {e}")
+    return np.array(values, dtype=float), "input values"
+ 
+ 
+def load_from_stdin():
+    text = sys.stdin.read()
+    # Support comma-separated or newline-separated input
+    tokens = [t.strip() for t in text.replace(",", "\n").splitlines() if t.strip() != ""]
+    try:
+        values = [float(t) for t in tokens]
+    except ValueError as e:
+        raise ValueError(f"Could not parse stdin as numbers: {e}")
+    return np.array(values, dtype=float), "stdin"
+ 
+ 
+def load_demo(n):
+    rng = np.random.default_rng()
+    values = rng.normal(loc=100, scale=15, size=n).round(2)
+    return values, f"demo dataset (n={n})"
+ 
+ 
+# --------------------------------------------------------------------------
+# Stats + rendering
+# --------------------------------------------------------------------------
+ 
+def compute_stats(data):
+    return {
+        "Count": data.size,
+        "Sum": np.sum(data),
+        "Mean": np.mean(data),
+        "Median": np.median(data),
+        "Std Deviation": np.std(data, ddof=1) if data.size > 1 else 0.0,
+        "Variance": np.var(data, ddof=1) if data.size > 1 else 0.0,
+        "Min": np.min(data),
+        "Max": np.max(data),
+        "Range": np.max(data) - np.min(data),
+        "25th Percentile": np.percentile(data, 25),
+        "75th Percentile": np.percentile(data, 75),
+    }
+ 
+ 
+def format_number(x):
+    if float(x).is_integer():
+        return f"{x:,.0f}"
+    return f"{x:,.4f}"
+ 
+ 
+def ascii_histogram(data, bins=10, width=50):
+    counts, edges = np.histogram(data, bins=bins)
+    max_count = counts.max() if counts.max() > 0 else 1
+    lines = []
+    for i in range(len(counts)):
+        lo, hi = edges[i], edges[i + 1]
+        bar_len = int((counts[i] / max_count) * width)
+        bar = BAR_CHAR * bar_len
+        lines.append(f"  [{lo:>10.2f}, {hi:>10.2f}) | {bar} {counts[i]}")
+    return lines
+ 
+ 
+def print_report(data, label):
+    stats = compute_stats(data)
+    title = f" NumPy Statistics Dashboard — {label} "
+ 
+    print("=" * WIDTH)
+    print(title.center(WIDTH, "="))
+    print("=" * WIDTH)
+    print()
+ 
+    for name, value in stats.items():
+        print(f"  {name:<18}: {format_number(value)}")
+ 
+    print()
+    print("-" * WIDTH)
+    print("  Distribution (ASCII histogram)")
+    print("-" * WIDTH)
+    bins = min(10, max(1, data.size))
+    for line in ascii_histogram(data, bins=bins):
+        print(line)
+ 
+    print()
+    print("=" * WIDTH)
+ 
+ 
+# --------------------------------------------------------------------------
+# CLI
+# --------------------------------------------------------------------------
+ 
+def build_arg_parser():
+    parser = argparse.ArgumentParser(
+        description="NumPy Statistics Dashboard — compute mean, median, std, "
+                     "min/max and more from a dataset, with a text-based report.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+    parser.add_argument("file", nargs="?", help="Path to a CSV file")
+    parser.add_argument("--column", "-c", help="Column name or index to analyze (CSV mode)")
+    parser.add_argument("--values", help="Comma-separated numbers, e.g. 4,8,15,16,23,42")
+    parser.add_argument("--stdin", action="store_true", help="Read numbers from stdin")
+    parser.add_argument("--demo", action="store_true", help="Use a generated demo dataset")
+    parser.add_argument("--demo-size", type=int, default=200, help="Size of demo dataset (default: 200)")
+    parser.add_argument("--bins", type=int, default=10, help="Number of histogram bins (default: 10)")
+    return parser
+ 
+ 
+def prompt_for_dataset():
+    """Interactively ask the user for a CSV file (or fallback options)
+    when the script is run with no command-line arguments."""
+    print("No arguments given — let's set this up interactively.\n")
+    path = input("Enter path to a CSV file (or press Enter to type numbers instead): ").strip().strip('"')
+ 
+    if path:
+        column = input("Column name/index to analyze (press Enter to auto-detect): ").strip()
+        return load_from_csv(path, column if column else None)
+ 
+    raw = input("Enter comma-separated numbers (e.g. 4,8,15,16,23,42): ").strip()
+    if raw:
+        return load_from_values(raw)
+ 
+    print("No input provided — using a random demo dataset instead.\n")
+    return load_demo(200)
+ 
+ 
+def main():
+    parser = build_arg_parser()
+    args = parser.parse_args()
+ 
+    try:
+        if args.demo:
+            data, label = load_demo(args.demo_size)
+        elif args.stdin:
+            data, label = load_from_stdin()
+        elif args.values:
+            data, label = load_from_values(args.values)
+        elif args.file:
+            data, label = load_from_csv(args.file, args.column)
+        else:
+            # No arguments given -> ask the user interactively
+            data, label = prompt_for_dataset()
+    except (FileNotFoundError, ValueError, OSError) as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+ 
+    print_report(data, label)
+ 
+ 
+if __name__ == "__main__":
+    main()
+ 
